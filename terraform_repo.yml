@@ -1,0 +1,49 @@
+trigger:
+  branches:
+    include:
+    - none
+pool:
+  name: 'RS'
+parameters:
+- name: targetIP
+  type: string
+  default: ''
+- name: port
+  type: string
+  default: ''
+stages:
+- stage: ConnectivityCheck
+  jobs:
+  - job: CheckConnectivity
+    steps:
+    - task: Bash@3
+      name: VerifyPrivateConnectivity
+      inputs:
+        targetType: 'inline'
+        script: |
+          TARGET_IP='$(targetIP)'
+          PORT='$(port)'
+
+          if [ -z "$TARGET_IP" ]; then
+              echo "Error: Please provide the target private IP."
+              exit 1
+          fi
+
+          if [ -n "$PORT" ]; then
+              echo "Checking TCP connectivity to $TARGET_IP on port $PORT..."
+              nc -zv $TARGET_IP $PORT
+              if [ $? -eq 0 ]; then
+                  echo "TCP connection successful!"
+              else
+                  echo "TCP connection failed!"
+              fi
+          fi
+
+          echo "Pinging $TARGET_IP..."
+          ping -c 4 $TARGET_IP
+          if [ $? -eq 0 ]; then
+              echo "Ping successful! Private connectivity verified."
+          else
+              echo "Ping failed! Check firewall, NSG, or routing rules."
+          fi
+
